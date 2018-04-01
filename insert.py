@@ -29,3 +29,23 @@ def insertPrices(filepath):
             document.update(row)
 
             db.data.insert(document)
+
+
+def insertHeadlines():
+
+    import csv
+    import datetime
+    from pymongo import MongoClient
+
+    client = MongoClient()
+    db = client.cs4411
+
+    with open("data/worldnews/RedditNews.csv", 'rb') as f:
+
+        reader = csv.DictReader(f)
+
+        for row in reader:
+            # re-format the date
+            date = datetime.datetime.strptime(row['Date'], "%Y-%m-%d")
+            document = {'date': date, 'headline': row['News']}
+            db.headlines.insert(document)
