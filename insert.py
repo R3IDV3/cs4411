@@ -4,7 +4,7 @@ def insertPrices(filepath):
     import datetime
     from pymongo import MongoClient
 
-    client = MongoClient()
+    client = MongoClient(socketTimeoutMS = None, connectTimeoutMS = None, serverSelectionTimeoutMS = 999999999, waitQueueTimeoutMS = None)
     db = client.cs4411
 
     currency_name = filepath.replace("data/","").replace("_price.csv","")
@@ -37,7 +37,7 @@ def insertHeadlines():
     import datetime
     from pymongo import MongoClient
 
-    client = MongoClient()
+    client = MongoClient(socketTimeoutMS = None, connectTimeoutMS = None, serverSelectionTimeoutMS = 999999999, waitQueueTimeoutMS = None)
     db = client.cs4411
 
     with open("data/worldnews/RedditNews.csv", 'rb') as f:

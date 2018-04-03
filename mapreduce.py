@@ -3,7 +3,7 @@ def aggregatePrices():
     from bson.code import Code
     from pymongo import MongoClient
 
-    client = MongoClient()
+    client = MongoClient(socketTimeoutMS = None, connectTimeoutMS = None, serverSelectionTimeoutMS = 999999999, waitQueueTimeoutMS = None)
     db = client.cs4411
 
     mapper = Code(  """
@@ -26,13 +26,23 @@ def aggregatePrices():
 
     db.performance.drop()
     db.data.map_reduce(mapper, reducer, "performance")
+    db.performance.aggregate([
+        {
+            "$project": {
+                "_id": 0,
+                "date": "$_id.date",
+                "performance": "$value.performance"
+            }
+        },
+        {"$out": "performance"}
+    ])
 
 def headlineKeywords():
 
     from bson.code import Code
     from pymongo import MongoClient
 
-    client = MongoClient()
+    client = MongoClient(socketTimeoutMS = None, connectTimeoutMS = None, serverSelectionTimeoutMS = 999999999, waitQueueTimeoutMS = None)
     db = client.cs4411
 
     mapper = Code(  """
@@ -83,9 +93,11 @@ def headlineKeywords():
                             }
                         });
                         for(var i in keywords) {
-                            key = { date: this.date };
-                            value = { keywords: [ keywords[i] ] };
-                            emit(key, value);
+                            if (isNaN(parseFloat(keywords[i]))) {
+                                key = { date: this.date };
+                                value = { keywords: [ keywords[i] ] };
+                                emit(key, value);
+                            }
                         }
                     }
                     """)
@@ -102,3 +114,70 @@ def headlineKeywords():
 
     db.keywords.drop()
     db.headlines.map_reduce(mapper, reducer, "keywords")
+
+
+def countKeywords():
+
+    from bson.code import Code
+    from pymongo import MongoClient
+
+    client = MongoClient(socketTimeoutMS = None, connectTimeoutMS = None, serverSelectionTimeoutMS = 999999999, waitQueueTimeoutMS = None)
+    db = client.cs4411
+
+    mapper = Code(  """
+                    function() {
+                        for(var i in this.value.keywords){
+                            key = new Object();
+                            key["date"] = this._id.date;
+                            key["keyword"] = this.value.keywords[i];
+                            value = 1;
+                            emit(key, value);
+                        }
+                    }
+                    """)
+
+    reducer = Code( """
+                    function(key, values) { // value: { [1,1,1,1,1] }
+                        var sum = 0;
+                        for(var i in values) {
+                            sum = sum + values[i];
+                        }
+                        return sum;
+                    }
+                    """)
+
+    db.keywords.map_reduce(mapper, reducer, "keywords")
+
+
+def keywordScore():
+
+    from bson.code import Code
+    from pymongo import MongoClient
+
+    client = MongoClient(socketTimeoutMS = None, connectTimeoutMS = None, serverSelectionTimeoutMS = 999999999, waitQueueTimeoutMS = None)
+    db = client.cs4411
+
+    mapper = Code(  """
+                    function() {
+                        for(var i in this.keywords){
+                            key = {cryptocurrency: this.performance.name, keyword: this.keywords.keyword};
+                            var pc = this.performance.net;
+                            value = pc + ((0.25*pc)*(this.keywords.count - 1));
+                            emit(key, value);
+                        }
+                    }
+                    """)
+
+    reducer = Code( """
+                    function(key, values) { // value: { [1,1,1,1,1] }
+                        var sum = 0;
+                        var l = 0;
+                        for(var i in values) {
+                            sum = sum + values[i];
+                            l++;
+                        }
+                        return sum;
+                    }
+                    """)
+
+    db.unwound_performance_keywords.map_reduce(mapper, reducer, "keyword_score")

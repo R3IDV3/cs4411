@@ -14,6 +14,14 @@ Vagrant.configure("2") do |config|
   # boxes at https://vagrantcloud.com/search.
   config.vm.box = "dansweeting/ubuntu-trusty64-mongo-node"
 
+  config.vm.provider :virtualbox do |vb|
+#   # Don't boot with headless mode
+#   vb.gui = true
+#
+#   # Use VBoxManage to customize the VM. For example to change memory:
+    vb.customize ["modifyvm", :id, "--memory", "5000"]
+  end 
+
   # Disable automatic box update checking. If you disable this, then
   # boxes will only be checked for updates when the user runs
   # `vagrant box outdated`. This is not recommended.
